@@ -3,6 +3,7 @@ package co.autoscolombia.service;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -29,8 +30,8 @@ public class AccessService {
     public Map<String,Object> checkVehicle(String plate) {
         String p = normalizePlate(plate);
         List<Map<String,Object>> vehicles = jdbc.queryForList("""
-            SELECT v.id_vehiculo, v.placa, v.tipo, v.marca, v.color, v.estado AS estado_vehiculo,
-                   u.nombre_completo, m.id_mensualidad, m.fecha_inicio, m.fecha_fin, m.estado AS estado_mensualidad
+            SELECT v.id_vehiculo, v.id_usuario, v.placa, v.tipo, v.marca, v.color, v.estado AS estado_vehiculo,
+                   u.nombre_completo, u.estado AS estado_usuario, m.id_mensualidad, m.fecha_inicio, m.fecha_fin, m.estado AS estado_mensualidad
             FROM vehiculo v JOIN usuario u ON u.id_usuario=v.id_usuario
             LEFT JOIN mensualidad m ON m.id_vehiculo=v.id_vehiculo
             WHERE v.placa=? ORDER BY m.fecha_fin DESC
@@ -38,6 +39,7 @@ public class AccessService {
         if (vehicles.isEmpty()) return Map.of("permitido", false, "motivo", "La placa no está registrada.");
         Map<String,Object> v = vehicles.get(0);
         if (!"ACTIVO".equals(v.get("estado_vehiculo"))) return Map.of("permitido", false, "motivo", "El vehículo está inactivo.", "vehiculo", v);
+        if (!"ACTIVO".equals(v.get("estado_usuario"))) return Map.of("permitido", false, "motivo", "El usuario propietario está inactivo.", "vehiculo", v);
         List<Map<String,Object>> current = jdbc.queryForList("""
             SELECT id_mensualidad, fecha_inicio, fecha_fin, estado FROM mensualidad
             WHERE id_vehiculo=? AND estado='ACTIVA' AND fecha_inicio<=CURRENT_DATE AND fecha_fin>=CURRENT_DATE
@@ -65,15 +67,17 @@ public class AccessService {
         if (!Boolean.TRUE.equals(check.get("permitido"))) throw new IllegalStateException((String) check.get("motivo"));
         Map<String,Object> v = (Map<String,Object>) check.get("vehiculo");
         Map<String,Object> m = (Map<String,Object>) check.get("mensualidad");
+        Map<String,Object> owner = jdbc.queryForMap("SELECT estado FROM usuario WHERE id_usuario=? FOR UPDATE", v.get("id_usuario"));
+        if (!"ACTIVO".equals(owner.get("estado")))
+            throw new IllegalStateException("El usuario propietario está inactivo.");
         Map<String,Object> cell = jdbc.queryForMap("SELECT * FROM celda WHERE id_celda=? FOR UPDATE", cellId);
         if (!"LIBRE".equals(cell.get("estado")) || !compatible(String.valueOf(v.get("tipo")), String.valueOf(cell.get("tipo"))))
             throw new IllegalStateException("La celda no está libre o no es compatible.");
         Long operatorId = jdbc.queryForObject("SELECT id_operario FROM operario WHERE usuario_acceso=? AND estado='ACTIVO'", Long.class, operatorUsername);
         if (operatorId == null) throw new IllegalStateException("El operario no está activo.");
-        jdbc.update("INSERT INTO movimiento (id_mensualidad,id_celda,id_operario_entrada,fecha_hora_entrada,estado) VALUES (?,?,?, ?, 'ABIERTA')",
-                m.get("id_mensualidad"), cellId, operatorId, Timestamp.valueOf(LocalDateTime.now()));
-        long movementId = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        jdbc.update("UPDATE celda SET estado='OCUPADA' WHERE id_celda=? AND estado='LIBRE'", cellId);
+        Long movementId = jdbc.queryForObject("INSERT INTO movimiento (id_mensualidad,id_celda,id_operario_entrada,fecha_hora_entrada,estado) VALUES (?,?,?,?, 'ABIERTA') RETURNING id_movimiento", Long.class, m.get("id_mensualidad"), cellId, operatorId, Timestamp.valueOf(LocalDateTime.now(ZoneId.of("America/Bogota"))));
+        int updated = jdbc.update("UPDATE celda SET estado='OCUPADA', fecha_actualizacion=CURRENT_TIMESTAMP WHERE id_celda=? AND estado='LIBRE'", cellId);
+        if (updated != 1) throw new IllegalStateException("La celda dejó de estar disponible. Verifique e intente nuevamente.");
         audit(operatorId, "REGISTRAR_ENTRADA", "ACEPTADA", "Movimiento " + movementId + ", placa " + p);
         return movementId;
     }
@@ -92,8 +96,8 @@ public class AccessService {
         if (operatorId == null) throw new IllegalStateException("El operario no está activo.");
         Map<String,Object> row = rows.get(0);
         jdbc.update("UPDATE movimiento SET estado='CERRADA', fecha_hora_salida=?, id_operario_salida=? WHERE id_movimiento=? AND estado='ABIERTA'",
-                Timestamp.valueOf(LocalDateTime.now()), operatorId, row.get("id_movimiento"));
-        jdbc.update("UPDATE celda SET estado='LIBRE' WHERE id_celda=?", row.get("id_celda"));
+                Timestamp.valueOf(LocalDateTime.now(ZoneId.of("America/Bogota"))), operatorId, row.get("id_movimiento"));
+        jdbc.update("UPDATE celda SET estado='LIBRE', fecha_actualizacion=CURRENT_TIMESTAMP WHERE id_celda=?", row.get("id_celda"));
         audit(operatorId, "REGISTRAR_SALIDA", "ACEPTADA", "Movimiento " + row.get("id_movimiento") + ", placa " + p);
     }
 
@@ -122,6 +126,6 @@ public class AccessService {
 
     private void audit(Long operatorId, String operation, String result, String detail) {
         jdbc.update("INSERT INTO auditoria (id_operario,operacion,resultado,detalle,fecha_hora) VALUES (?,?,?,?,?)",
-                operatorId, operation, result, detail, Timestamp.valueOf(LocalDateTime.now()));
+                operatorId, operation, result, detail, Timestamp.valueOf(LocalDateTime.now(ZoneId.of("America/Bogota"))));
     }
 }
