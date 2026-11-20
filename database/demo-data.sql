@@ -31,3 +31,20 @@ INSERT INTO operario(nombres, usuario_acceso, password_hash, rol, estado) VALUES
 ('Operario de Acceso','operario','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy','OPERARIO','ACTIVO'),
 ('Supervisor General','supervisor','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy','SUPERVISOR','ACTIVO')
 ON CONFLICT (usuario_acceso) DO NOTHING;
+
+INSERT INTO mensualidad(id_vehiculo, fecha_inicio, fecha_fin, estado)
+SELECT v.id_vehiculo, CURRENT_DATE + 21, CURRENT_DATE + 50, 'ACTIVA'
+FROM vehiculo v
+WHERE v.placa = 'ABC123'
+  AND NOT EXISTS (
+      SELECT 1 FROM mensualidad m
+      WHERE m.id_vehiculo = v.id_vehiculo AND m.fecha_inicio = CURRENT_DATE + 21
+  );
+
+INSERT INTO pago(id_mensualidad, id_operario_registro, fecha_hora_pago, valor, medio_pago, referencia, estado)
+SELECT m.id_mensualidad, o.id_operario, CURRENT_TIMESTAMP, 120000.00, 'TRANSFERENCIA', 'TRX-DEMO-ABC123', 'PAGADO'
+FROM mensualidad m
+JOIN vehiculo v ON v.id_vehiculo = m.id_vehiculo
+JOIN operario o ON o.usuario_acceso = 'supervisor'
+WHERE v.placa = 'ABC123' AND m.fecha_inicio = CURRENT_DATE + 21
+ON CONFLICT (id_mensualidad) DO NOTHING;

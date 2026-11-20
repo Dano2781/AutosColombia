@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pagos | Autos Colombia</title><link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header><div><h1>Autos Colombia</h1><p>Gestión de pagos y mensualidades</p></div><form method="post" th:action="@{/logout}"><button class="secondary">Cerrar sesión</button></form></header>
+<main>
+  <nav><a href="/">Accesos</a><a href="/usuarios">Usuarios</a><a href="/celdas">Celdas</a><a href="/movimientos">Movimientos</a><a href="/pagos">Pagos</a></nav>
+  <section class="card">
+    <div class="section-title"><h2>Pagos registrados</h2><a class="button-link" href="/pagos/nuevo">Registrar pago</a></div>
+    <form method="get" action="/pagos" class="filters">
+      <label>Placa<input name="placa" placeholder="ABC123" th:value="${placa}"></label>
+      <label>Estado<select name="estado"><option value="">Todos</option><option value="PAGADO" th:selected="${estado == 'PAGADO'}">Pagado</option><option value="ANULADO" th:selected="${estado == 'ANULADO'}">Anulado</option></select></label>
+      <label>Medio de pago<select name="medioPago"><option value="">Todos</option><option value="EFECTIVO" th:selected="${medioPago == 'EFECTIVO'}">Efectivo</option><option value="TARJETA" th:selected="${medioPago == 'TARJETA'}">Tarjeta</option><option value="TRANSFERENCIA" th:selected="${medioPago == 'TRANSFERENCIA'}">Transferencia</option></select></label>
+      <label>Desde<input type="date" name="desde" th:value="${desde}"></label><label>Hasta<input type="date" name="hasta" th:value="${hasta}"></label><button>Buscar</button>
+    </form>
+  </section>
+  <section class="card"><div class="table-wrap"><table><thead><tr><th>Pago</th><th>Placa</th><th>Cliente</th><th>Periodo</th><th>Valor</th><th>Medio</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+    <tr th:each="p : ${pagos}"><td th:text="${p.id_pago}"></td><td th:text="${p.placa}"></td><td th:text="${p.nombre_completo}"></td><td th:text="${p.fecha_inicio + ' a ' + p.fecha_fin}"></td><td th:text="${'$' + #numbers.formatDecimal(p.valor, 1, 'POINT', 2, 'COMMA')}"></td><td th:text="${p.medio_pago}"></td><td th:text="${p.fecha_hora_pago}"></td><td><span class="pill" th:text="${p.estado}" th:classappend="${p.estado == 'PAGADO'} ? ' closed' : ' inactive'"></span></td><td><a th:href="@{/pagos/{id}(id=${p.id_pago})}">Ver detalle</a></td></tr>
+    <tr th:if="${#lists.isEmpty(pagos)}"><td colspan="9">No se encontraron pagos para los filtros seleccionados.</td></tr>
+  </tbody></table></div></section>
+</main>
+</body>
+</html>

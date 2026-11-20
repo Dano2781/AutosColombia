@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Detalle de pago | Autos Colombia</title><link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header><div><h1>Autos Colombia</h1><p>Detalle del pago</p></div><form method="post" th:action="@{/logout}"><button class="secondary">Cerrar sesión</button></form></header>
+<main>
+  <nav><a href="/">Accesos</a><a href="/usuarios">Usuarios</a><a href="/celdas">Celdas</a><a href="/movimientos">Movimientos</a><a href="/pagos">Pagos</a></nav>
+  <p class="error" th:if="${error}" th:text="${error}"></p>
+  <section class="card"><div class="section-title"><h2 th:text="${'Pago #' + pago.id_pago}"></h2><span class="pill" th:text="${pago.estado}" th:classappend="${pago.estado == 'PAGADO'} ? ' closed' : ' inactive'"></span></div>
+    <div class="details-grid"><div><small>Cliente</small><b th:text="${pago.nombre_completo}"></b></div><div><small>Documento</small><b th:text="${pago.numero_documento}"></b></div><div><small>Vehículo</small><b th:text="${pago.placa + ' - ' + pago.tipo}"></b></div><div><small>Periodo pagado</small><b th:text="${pago.fecha_inicio + ' a ' + pago.fecha_fin}"></b></div><div><small>Valor</small><b th:text="${'$' + #numbers.formatDecimal(pago.valor, 1, 'POINT', 2, 'COMMA')}"></b></div><div><small>Medio y referencia</small><b th:text="${pago.medio_pago + (pago.referencia == null ? '' : ' - ' + pago.referencia)}"></b></div><div><small>Fecha de registro</small><b th:text="${pago.fecha_hora_pago}"></b></div><div><small>Responsable</small><b th:text="${pago.operario_registro}"></b></div></div>
+    <p th:if="${pago.estado == 'ANULADO'}" class="error" th:text="${'Pago anulado: ' + pago.motivo_anulacion}"></p>
+    <div class="form-actions"><a class="button-link" th:href="@{/pagos/{id}/comprobante(id=${pago.id_pago})}">Ver comprobante</a></div>
+  </section>
+  <section class="card" th:if="${pago.estado == 'PAGADO'}"><h2>Anular pago</h2><p class="hint">Solo se permite si el vehículo no tiene una entrada abierta asociada a esta mensualidad.</p><form method="post" th:action="@{/pagos/{id}/anular(id=${pago.id_pago})}" class="form-grid"><label class="wide">Motivo de anulación<input name="motivo" maxlength="250" required placeholder="Explique el motivo"></label><div class="wide form-actions"><button class="danger" type="submit">Anular pago</button></div></form></section>
+</main>
+</body>
+</html>

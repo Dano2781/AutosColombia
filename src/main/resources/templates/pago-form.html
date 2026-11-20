@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Registrar pago | Autos Colombia</title><link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header><div><h1>Autos Colombia</h1><p>Registro de pago mensual</p></div><form method="post" th:action="@{/logout}"><button class="secondary">Cerrar sesión</button></form></header>
+<main>
+  <nav><a href="/">Accesos</a><a href="/usuarios">Usuarios</a><a href="/celdas">Celdas</a><a href="/movimientos">Movimientos</a><a href="/pagos">Pagos</a></nav>
+  <section class="card"><h2>1. Buscar vehículo</h2><form method="get" action="/pagos/nuevo" class="inline"><label>Placa<input name="placa" placeholder="ABC123" th:value="${placa}" required maxlength="8"></label><button>Consultar</button></form></section>
+  <p class="error" th:if="${error}" th:text="${error}"></p>
+  <section class="card" th:if="${not #lists.isEmpty(vehiculos)}"><h2>2. Registrar pago</h2>
+    <div th:each="v : ${vehiculos}" class="details-grid payment-vehicle"><div><small>Vehículo</small><b th:text="${v.placa + ' - ' + v.tipo}"></b></div><div><small>Cliente</small><b th:text="${v.nombre_completo}"></b></div><div><small>Documento</small><b th:text="${v.numero_documento}"></b></div><div><small>Último vencimiento</small><b th:text="${v.ultimo_vencimiento} ?: 'Sin mensualidades previas'"></b></div></div>
+    <p class="hint">El sistema crea una mensualidad por 30 días y empieza después del último vencimiento vigente.</p>
+    <form method="post" action="/pagos/guardar" class="form-grid"><input type="hidden" name="placa" th:value="${placa}">
+      <label>Valor del pago<input type="number" name="valor" min="0.01" max="999999999999.99" step="0.01" required placeholder="120000.00" th:value="${valor}"></label>
+      <label>Medio de pago<select name="medioPago" required><option value="EFECTIVO" th:selected="${medioPago == null or medioPago == 'EFECTIVO'}">Efectivo</option><option value="TARJETA" th:selected="${medioPago == 'TARJETA'}">Tarjeta</option><option value="TRANSFERENCIA" th:selected="${medioPago == 'TRANSFERENCIA'}">Transferencia</option></select></label>
+      <label class="wide">Referencia de pago<input name="referencia" maxlength="60" placeholder="Obligatoria para tarjeta y transferencia" th:value="${referencia}"></label>
+      <div class="wide form-actions"><a class="button-link secondary-link" href="/pagos">Cancelar</a><button type="submit">Confirmar pago</button></div>
+    </form>
+  </section>
+  <section class="card" th:if="${placa != null and not placa.isBlank() and #lists.isEmpty(vehiculos) and error == null}"><p>No existe un vehículo activo asociado a la placa consultada.</p></section>
+</main>
+</body>
+</html>

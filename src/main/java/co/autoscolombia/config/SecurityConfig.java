@@ -29,6 +29,7 @@ public class SecurityConfig {
         return http.authorizeHttpRequests(a -> a
                     .requestMatchers("/login", "/css/**").permitAll()
                     .requestMatchers("/movimientos").hasRole("SUPERVISOR")
+                    .requestMatchers("/pagos/**").hasRole("SUPERVISOR")
                     .requestMatchers("/usuarios/nuevo", "/usuarios/guardar", "/usuarios/*/editar",
                                      "/usuarios/*/estado", "/celdas/nueva", "/celdas/guardar",
                                      "/celdas/*/editar", "/celdas/*/estado").hasRole("SUPERVISOR")

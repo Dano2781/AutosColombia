@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comprobante de pago | Autos Colombia</title><link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<header class="no-print"><div><h1>Autos Colombia</h1><p>Comprobante de pago</p></div><div class="form-actions"><a class="button-link secondary-link" th:href="@{/pagos/{id}(id=${pago.id_pago})}">Volver al detalle</a><button type="button" onclick="window.print()">Imprimir</button></div></header>
+<main><section class="card receipt"><h1>Comprobante de pago</h1><p class="receipt-number" th:text="${'Pago #' + pago.id_pago}"></p><span class="pill" th:text="${pago.estado}" th:classappend="${pago.estado == 'PAGADO'} ? ' closed' : ' inactive'"></span><hr>
+  <div class="details-grid"><div><small>Cliente</small><b th:text="${pago.nombre_completo}"></b></div><div><small>Documento</small><b th:text="${pago.numero_documento}"></b></div><div><small>Placa</small><b th:text="${pago.placa}"></b></div><div><small>Periodo</small><b th:text="${pago.fecha_inicio + ' a ' + pago.fecha_fin}"></b></div><div><small>Valor pagado</small><b th:text="${'$' + #numbers.formatDecimal(pago.valor, 1, 'POINT', 2, 'COMMA')}"></b></div><div><small>Medio de pago</small><b th:text="${pago.medio_pago}"></b></div><div><small>Referencia</small><b th:text="${pago.referencia} ?: 'No aplica'"></b></div><div><small>Registrado por</small><b th:text="${pago.operario_registro}"></b></div></div>
+  <p th:if="${pago.estado == 'ANULADO'}" class="error" th:text="${'Anulado: ' + pago.motivo_anulacion}"></p><p class="hint">Conserve este comprobante como soporte del pago mensual.</p>
+</section></main>
+</body>
+</html>

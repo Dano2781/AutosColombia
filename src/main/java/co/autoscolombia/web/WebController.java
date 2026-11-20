@@ -2,6 +2,8 @@ package co.autoscolombia.web;
 
 import co.autoscolombia.service.AccessService;
 import co.autoscolombia.service.AdminService;
+import co.autoscolombia.service.PaymentService;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Map;
 import org.springframework.security.core.Authentication;
@@ -13,10 +15,12 @@ import org.springframework.web.bind.annotation.*;
 public class WebController {
     private final AccessService accessService;
     private final AdminService adminService;
+    private final PaymentService paymentService;
 
-    public WebController(AccessService accessService, AdminService adminService) {
+    public WebController(AccessService accessService, AdminService adminService, PaymentService paymentService) {
         this.accessService = accessService;
         this.adminService = adminService;
+        this.paymentService = paymentService;
     }
 
     @GetMapping("/login")
@@ -203,6 +207,80 @@ public class WebController {
             return "celda-detalle";
         }
     }
+
+    // Gestión de pagos
+    @GetMapping("/pagos")
+    public String payments(@RequestParam(required=false) String placa,
+                           @RequestParam(required=false) String estado,
+                           @RequestParam(required=false) String medioPago,
+                           @RequestParam(required=false) String desde,
+                           @RequestParam(required=false) String hasta,
+                           Authentication auth, Model model) {
+        model.addAttribute("supervisor", isSupervisor(auth));
+        model.addAttribute("pagos", paymentService.payments(placa, estado, medioPago,
+                parseDate(desde), parseDate(hasta)));
+        model.addAttribute("placa", placa); model.addAttribute("estado", estado);
+        model.addAttribute("medioPago", medioPago); model.addAttribute("desde", desde); model.addAttribute("hasta", hasta);
+        return "pagos";
+    }
+
+    @GetMapping("/pagos/nuevo")
+    public String newPayment(@RequestParam(required=false) String placa, Authentication auth, Model model) {
+        model.addAttribute("supervisor", isSupervisor(auth));
+        model.addAttribute("placa", placa);
+        model.addAttribute("vehiculos", placa == null || placa.isBlank() ? java.util.List.of() : paymentService.paymentVehicles(placa));
+        return "pago-form";
+    }
+
+    @PostMapping("/pagos/guardar")
+    public String savePayment(@RequestParam String placa, @RequestParam BigDecimal valor,
+                              @RequestParam String medioPago, @RequestParam(required=false) String referencia,
+                              Authentication auth, Model model) {
+        try {
+            long id = paymentService.registerPayment(placa, valor, medioPago, referencia, auth.getName());
+            return "redirect:/pagos/" + id;
+        } catch (RuntimeException e) {
+            model.addAttribute("supervisor", isSupervisor(auth));
+            model.addAttribute("error", e.getMessage()); model.addAttribute("placa", placa);
+            model.addAttribute("valor", valor); model.addAttribute("medioPago", medioPago); model.addAttribute("referencia", referencia);
+            model.addAttribute("vehiculos", paymentService.paymentVehicles(placa));
+            return "pago-form";
+        }
+    }
+
+    @GetMapping("/pagos/{id}")
+    public String paymentDetail(@PathVariable long id, @RequestParam(required=false) String error,
+                                Authentication auth, Model model) {
+        model.addAttribute("supervisor", isSupervisor(auth));
+        model.addAttribute("pago", paymentService.payment(id));
+        model.addAttribute("error", error);
+        return "pago-detalle";
+    }
+
+    @PostMapping("/pagos/{id}/anular")
+    public String cancelPayment(@PathVariable long id, @RequestParam String motivo,
+                                Authentication auth, Model model) {
+        try {
+            paymentService.cancelPayment(id, motivo, auth.getName());
+            return "redirect:/pagos/" + id;
+        } catch (RuntimeException e) {
+            model.addAttribute("supervisor", isSupervisor(auth));
+            model.addAttribute("error", e.getMessage()); model.addAttribute("pago", paymentService.payment(id));
+            return "pago-detalle";
+        }
+    }
+
+    @GetMapping("/pagos/{id}/comprobante")
+    public String paymentReceipt(@PathVariable long id, Authentication auth, Model model) {
+        model.addAttribute("supervisor", isSupervisor(auth));
+        model.addAttribute("pago", paymentService.payment(id));
+        return "pago-comprobante";
+    }
+
+    private LocalDate parseDate(String value) {
+        return value == null || value.isBlank() ? null : LocalDate.parse(value);
+    }
+
     private boolean isSupervisor(Authentication auth) {
         return auth != null && auth.getAuthorities().stream().anyMatch(a -> "ROLE_SUPERVISOR".equals(a.getAuthority()));
     }

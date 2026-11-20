@@ -1,5 +1,5 @@
 <!doctype html><html lang="es" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Autos Colombia</title><link rel="stylesheet" href="/css/app.css"></head><body><header><div><h1>Autos Colombia</h1><p>Control de entrada y salida de vehículos</p></div><form method="post" th:action="@{/logout}"><button class="secondary">Cerrar sesión</button></form></header><main>
-<nav><a href="/">Accesos</a><a href="/usuarios">Usuarios</a><a href="/celdas">Celdas</a><a th:if="${supervisor}" href="/movimientos">Consultar movimientos</a></nav>
+<nav><a href="/">Accesos</a><a href="/usuarios">Usuarios</a><a href="/celdas">Celdas</a><a th:if="${supervisor}" href="/movimientos">Consultar movimientos</a><a th:if="${supervisor}" href="/pagos">Pagos</a></nav>
 <p class="success" th:if="${mensaje}" th:text="${mensaje}"></p><p class="error" th:if="${error}" th:text="${error}"></p>
 <section class="card"><h2>1. Verificar vehículo</h2><form method="post" th:action="@{/verificar}" class="inline"><label>Placa<input name="placa" placeholder="ABC123" th:value="${placa}" required maxlength="8"></label><button>Verificar</button></form>
 <div th:if="${resultado}" class="result"><p th:text="${resultado.motivo}" th:classappend="${resultado.permitido} ? 'success' : 'error'"></p>
